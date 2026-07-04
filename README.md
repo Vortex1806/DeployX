@@ -47,12 +47,57 @@ sudo docker compose ps    # confirm postgres + redis are up
 Cloud-init takes 30-60s to finish installing docker after the instance first boots —
 if `docker` isn't found yet, wait a bit and retry.
 
-## What's next
+## Day 1, hour 2-4: api-server
 
-- `api-server/` — FastAPI + SQLModel + Alembic, `POST /project`, `POST /deploy` triggering
-  `ecs:RunTask` via boto3 (Day 1, hour 2-4)
-- `build-worker/` — Dockerfile + Python build script (Day 1, hour 4-6)
-- End-to-end test against a real static repo (Day 1, hour 6-8)
+```
+cd api-server
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+Fill in `.env`:
+- `DATABASE_URL` — leave as-is if you're testing locally against `docker-compose.dev.yml`
+- `AWS_REGION`, `ECS_CLUSTER`, `ECS_TASK_DEFINITION`, `ECS_SUBNET_ID`, `ECS_SECURITY_GROUP_ID` — straight from `terraform output` in `terraform/`
+- `S3_BUCKET`, `ROOT_DOMAIN` — not used yet, needed by the reverse proxy tomorrow
+
+Bring up local Postgres + Redis and run the migration:
+
+```
+cd ..
+docker compose -f docker-compose.dev.yml up -d
+cd api-server
+alembic upgrade head
+```
+
+Run it:
+
+```
+uvicorn app.main:app --reload
+```
+
+Then hit `http://localhost:8000/docs` and try it end to end:
+
+```
+curl -X POST localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-test-site", "git_url": "https://github.com/some-user/some-static-repo"}'
+
+# copy the returned "id", then:
+curl -X POST localhost:8000/projects/<project_id>/deploy
+```
+
+If your AWS credentials are configured (`aws configure` or env vars) and the ECS
+values in `.env` are correct, this actually launches a Fargate task right now —
+check the ECS console or `aws ecs list-tasks --cluster deployx-cluster`. The
+build-worker image doesn't exist in ECR yet (that's hour 4-6), so the task will
+fail to pull the image — that's expected at this stage. A `FAILED` deployment
+row with a real ECS task ARN attached means the trigger wiring is correct.
+
+## Day 1, hour 4-6: build-worker
+
+Not started yet — next up.
+
 
 ## Cost / cleanup
 
