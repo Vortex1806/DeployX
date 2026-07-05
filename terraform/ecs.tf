@@ -64,6 +64,11 @@ resource "aws_ecs_task_definition" "build_worker" {
   execution_role_arn       = aws_iam_role.task_execution.arn
   task_role_arn            = aws_iam_role.task.arn
 
+  # NOTE: POSTGRES_PASSWORD below is a plaintext container env var, visible to
+  # anyone with ecs:DescribeTaskDefinition on this account. Fine for a 2-day
+  # build behind your own AWS account; before this is "enterprise grade" for
+  # real, move it into Secrets Manager and reference it via task definition
+  # `secrets` instead of `environment`.
   container_definitions = jsonencode([
     {
       name      = "build-worker"
@@ -72,8 +77,13 @@ resource "aws_ecs_task_definition" "build_worker" {
       environment = [
         { name = "S3_BUCKET", value = aws_s3_bucket.output.bucket },
         { name = "AWS_REGION", value = var.aws_region },
-        { name = "REDIS_HOST", value = aws_eip.host.public_ip },
-        { name = "REDIS_PORT", value = "6379" }
+        { name = "REDIS_HOST", value = aws_instance.host.private_ip },
+        { name = "REDIS_PORT", value = "6379" },
+        { name = "POSTGRES_HOST", value = aws_instance.host.private_ip },
+        { name = "POSTGRES_PORT", value = "5432" },
+        { name = "POSTGRES_DB", value = "deployx" },
+        { name = "POSTGRES_USER", value = "deployx" },
+        { name = "POSTGRES_PASSWORD", value = var.postgres_password }
         # GIT_REPOSITORY_URL, PROJECT_ID, DEPLOYMENT_ID are injected per-run
         # by the api-server via the RunTask containerOverrides, not fixed here.
       ]

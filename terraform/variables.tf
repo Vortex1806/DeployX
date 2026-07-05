@@ -20,3 +20,9 @@ variable "instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+variable "postgres_password" {
+  description = "Shared Postgres password — used both by the build-worker task definition and the docker-compose Postgres container on the EC2 box"
+  type        = string
+  sensitive   = true
+}

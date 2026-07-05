@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     # Postgres
-    database_url: str = "postgresql+psycopg2://deployx:devpassword@localhost:5432/deployx"
+    database_url: str = "postgresql+psycopg://deployx:devpassword@localhost:5432/deployx"
 
     # ECS — values come straight out of `terraform output` on Day 1
     aws_region: str

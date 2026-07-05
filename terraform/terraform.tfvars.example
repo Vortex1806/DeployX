@@ -1,1 +1,2 @@
-key_pair_name = "your-existing-ec2-keypair-name"
+key_pair_name      = "your-existing-ec2-keypair-name"
+postgres_password  = "pick-something-strong-here"
